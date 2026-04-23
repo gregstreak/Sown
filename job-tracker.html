@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --g50: #eef2ec; --g100: #cdd9c4; --g200: #a8bc9a;
+    --g400: #6e8f62; --g600: #4a6640; --g800: #2e4428; --g900: #1b2c17;
+    --bg: #ffffff; --bg2: #f5f7f4; --text: #1e1e1e; --text2: #5a5a5a; --border: #d4dccf;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c201a; --bg2: #222720; --text: #e2e8de; --text2: #8a9e82;
+      --border: #2e3829; --g50: #1e2419; --g100: #2a3424;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg2); color: var(--text); min-height: 100vh; }
+
+  #app { padding: 1.5rem 1.25rem 3rem; max-width: 960px; margin: 0 auto; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 10px; }
+  .logo { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 600; color: #3a6b2a; letter-spacing: 0.06em; line-height: 1; }
+  .logo .accent { color: var(--g400); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .stat { background: var(--bg); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  .stat-n { font-size: 24px; font-weight: 500; color: var(--g800); }
+  .stat-l { font-size: 12px; color: var(--g600); margin-top: 2px; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 0.85rem; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill { border: 0.5px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; background: transparent; color: var(--g600); font-family: inherit; transition: background 0.15s; }
+  .pill:hover { background: var(--g50); }
+  .pill.active { background: var(--g400); color: white; border-color: var(--g400); }
+
+  .right-controls { display: flex; gap: 8px; align-items: center; }
+  .search-wrap { position: relative; }
+  .search-wrap input { padding: 7px 10px 7px 30px; border: 0.5px solid var(--border); border-radius: 8px; font-size: 13px; width: 200px; color: var(--text); background: var(--bg); font-family: inherit; }
+  .search-wrap input:focus { outline: none; border-color: var(--g400); }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--g400); font-size: 14px; pointer-events: none; }
+
+  .btn-add { background: var(--g400); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; }
+  .btn-add:hover { background: var(--g600); }
+
+  .table-wrap { background: var(--bg); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  col.c-inst     { width: 18%; }
+  col.c-role     { width: 20%; }
+  col.c-country  { width: 9%; }
+  col.c-applied  { width: 11%; }
+  col.c-deadline { width: 11%; }
+  col.c-status   { width: 11%; }
+  col.c-notes    { width: 14%; }
+  col.c-actions  { width: 6%; }
+  th { text-align: left; color: var(--g600); font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 12px; background: var(--bg2); }
+  td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg2); }
+  .empty { text-align: center; color: var(--g600); padding: 3rem; font-size: 14px; }
+
+  .badge { display: inline-block; border-radius: 20px; padding: 3px 9px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .b-applied     { background: #dbeafe; color: #1e40af; }
+  .b-interview   { background: #fef9c3; color: #92400e; }
+  .b-offer       { background: #dcfce7; color: #166534; }
+  .b-rejected    { background: #fee2e2; color: #991b1b; }
+  .b-withdrawn   { background: #f1f5f9; color: #475569; }
+  .b-no-response { background: #f4f4f5; color: #71717a; }
+
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 5px; color: var(--g600); font-size: 15px; line-height: 1; }
+  .icon-btn:hover { background: var(--g50); }
+  .icon-btn.del:hover { background: #fee2e2; color: #991b1b; }
+  .actions { display: flex; gap: 2px; }
+
+  .sort-btn { background: none; border: none; cursor: pointer; color: var(--g400); font-size: 10px; margin-left: 3px; vertical-align: middle; padding: 0; }
+  .sort-btn:hover { color: var(--g600); }
+
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+  .modal { background: var(--bg); border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 500px; border: 0.5px solid var(--border); }
+  .modal h2 { font-size: 17px; font-weight: 500; color: var(--g800); margin-bottom: 1.25rem; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--g600); margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select, .field textarea {
+    width: 100%; border: 0.5px solid var(--border); border-radius: 7px;
+    padding: 8px 10px; font-size: 14px; font-family: inherit;
+    background: var(--bg); color: var(--text);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--g400); }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
+  .btn-cancel { background: none; border: 0.5px solid var(--border); border-radius: 7px; padding: 8px 16px; font-size: 14px; cursor: pointer; color: var(--text2); font-family: inherit; }
+  .btn-cancel:hover { background: var(--bg2); }
+  .btn-save { background: var(--g400); color: white; border: none; border-radius: 7px; padding: 8px 20px; font-size: 14px; cursor: pointer; font-family: inherit; font-weight: 500; }
+  .btn-save:hover { background: var(--g600); }
+
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .search-wrap input { width: 140px; }
+    col.c-country, col.c-notes { display: none; }
+    td:nth-child(3), td:nth-child(7), th:nth-child(3), th:nth-child(7) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header">
+    <div class="logo">Sown</div>
+    <div class="right-controls">
+      <div class="search-wrap">
+        <span class="search-icon">&#9906;</span>
+        <input id="search" type="text" placeholder="Search…" oninput="render()">
+      </div>
+      <button class="btn-add" onclick="openModal()">+ Add application</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <div class="filter-bar" id="filters"></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <colgroup>
+        <col class="c-inst"><col class="c-role"><col class="c-country">
+        <col class="c-applied"><col class="c-deadline"><col class="c-status">
+        <col class="c-notes"><col class="c-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Institution <button class="sort-btn" onclick="setSort('institution')" title="Sort">⇅</button></th>
+          <th>Role <button class="sort-btn" onclick="setSort('role')" title="Sort">⇅</button></th>
+          <th>Country</th>
+          <th>Applied <button class="sort-btn" onclick="setSort('date')" title="Sort">⇅</button></th>
+          <th>Deadline <button class="sort-btn" onclick="setSort('deadline')" title="Sort">⇅</button></th>
+          <th>Status</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty-msg"></div>
+  </div>
+</div>
+
+<div id="modal" style="display:none;">
+  <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2 id="modal-title">New application</h2>
+      <div class="row2">
+        <div class="field"><label>Institution</label><input id="f-institution" placeholder="University of Lapland"></div>
+        <div class="field"><label>Country</label><input id="f-country" placeholder="Finland"></div>
+      </div>
+      <div class="field"><label>Role / position</label><input id="f-role" placeholder="Professor, Visual Culture"></div>
+      <div class="row2">
+        <div class="field"><label>Date applied</label><input id="f-date" type="date"></div>
+        <div class="field"><label>Deadline</label><input id="f-deadline" type="date"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Status</label>
+          <select id="f-status">
+            <option value="applied">Applied</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+            <option value="no-response">No response</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+        </div>
+        <div class="field"><label>Contact / ref</label><input id="f-contact" placeholder="hr@ulapland.fi"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Application ref, portal link, what the role was about…"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveEntry()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'jt_entries_v1';
+let entries = [];
+let editId = null;
+let filterStatus = 'all';
+let sortField = 'date';
+let sortDir = -1;
+
+const statusMeta = {
+  applied:       { label: 'Applied',      cls: 'b-applied' },
+  interview:     { label: 'Interview',    cls: 'b-interview' },
+  offer:         { label: 'Offer',        cls: 'b-offer' },
+  rejected:      { label: 'Rejected',     cls: 'b-rejected' },
+  withdrawn:     { label: 'Withdrawn',    cls: 'b-withdrawn' },
+  'no-response': { label: 'No response',  cls: 'b-no-response' },
+};
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+  } catch(e) { entries = []; }
+  render();
+}
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); } catch(e) {}
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function openModal(eid) {
+  editId = eid || null;
+  document.getElementById('modal-title').textContent = eid ? 'Edit application' : 'New application';
+  const e = eid ? entries.find(x => x.id === eid) : {};
+  document.getElementById('f-institution').value = e.institution || '';
+  document.getElementById('f-country').value     = e.country || '';
+  document.getElementById('f-role').value        = e.role || '';
+  document.getElementById('f-date').value        = e.date || '';
+  document.getElementById('f-deadline').value    = e.deadline || '';
+  document.getElementById('f-status').value      = e.status || 'applied';
+  document.getElementById('f-contact').value     = e.contact || '';
+  document.getElementById('f-notes').value       = e.notes || '';
+  document.getElementById('modal').style.display = 'block';
+  document.getElementById('f-institution').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  editId = null;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+function saveEntry() {
+  const institution = document.getElementById('f-institution').value.trim();
+  const role        = document.getElementById('f-role').value.trim();
+  if (!institution && !role) {
+    alert('Please add at least an institution or role.');
+    return;
+  }
+  const entry = {
+    id:          editId || uid(),
+    institution,
+    country:     document.getElementById('f-country').value.trim(),
+    role,
+    date:        document.getElementById('f-date').value,
+    deadline:    document.getElementById('f-deadline').value,
+    status:      document.getElementById('f-status').value,
+    contact:     document.getElementById('f-contact').value.trim(),
+    notes:       document.getElementById('f-notes').value.trim(),
+  };
+  if (editId) {
+    entries = entries.map(e => e.id === editId ? entry : e);
+  } else {
+    entries.unshift(entry);
+  }
+  save();
+  closeModal();
+  render();
+}
+
+function deleteEntry(eid) {
+  if (!confirm('Remove this application?')) return;
+  entries = entries.filter(e => e.id !== eid);
+  save();
+  render();
+}
+
+function setSort(f) {
+  if (sortField === f) { sortDir *= -1; }
+  else { sortField = f; sortDir = -1; }
+  render();
+}
+
+function setFilter(s) {
+  filterStatus = s;
+  render();
+}
+
+function fmt(d) {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(day)} ${months[+m - 1]} ${y}`;
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function render() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+
+  let filtered = entries.filter(e => {
+    const matchStatus = filterStatus === 'all' || e.status === filterStatus;
+    const matchQ = !q || [e.institution, e.role, e.country, e.contact, e.notes]
+      .some(v => v && v.toLowerCase().includes(q));
+    return matchStatus && matchQ;
+  });
+
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortField === 'date')       { av = a.date || ''; bv = b.date || ''; }
+    else if (sortField === 'deadline') { av = a.deadline || ''; bv = b.deadline || ''; }
+    else if (sortField === 'institution') { av = (a.institution || '').toLowerCase(); bv = (b.institution || '').toLowerCase(); }
+    else { av = (a.role || '').toLowerCase(); bv = (b.role || '').toLowerCase(); }
+    return av < bv ? sortDir : av > bv ? -sortDir : 0;
+  });
+
+  const counts = {};
+  Object.keys(statusMeta).forEach(k => counts[k] = entries.filter(e => e.status === k).length);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-n">${entries.length}</div><div class="stat-l">Total applications</div></div>
+    <div class="stat"><div class="stat-n">${counts['applied'] || 0}</div><div class="stat-l">Applied</div></div>
+    <div class="stat"><div class="stat-n">${counts['interview'] || 0}</div><div class="stat-l">Interviews</div></div>
+    <div class="stat"><div class="stat-n">${counts['offer'] || 0}</div><div class="stat-l">Offers</div></div>
+  `;
+
+  const allStatuses = ['all', ...Object.keys(statusMeta)];
+  document.getElementById('filters').innerHTML = allStatuses.map(s => {
+    const label = s === 'all'
+      ? `All (${entries.length})`
+      : `${statusMeta[s].label} (${counts[s] || 0})`;
+    return `<button class="pill ${filterStatus === s ? 'active' : ''}" onclick="setFilter('${s}')">${label}</button>`;
+  }).join('');
+
+  const tbody = document.getElementById('tbody');
+  const emptyEl = document.getElementById('empty-msg');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    emptyEl.innerHTML = `<div class="empty">${
+      entries.length === 0
+        ? 'No applications yet — add your first one.'
+        : 'No results match your current filter.'
+    }</div>`;
+    return;
+  }
+
+  emptyEl.innerHTML = '';
+  tbody.innerHTML = filtered.map(e => {
+    const sm = statusMeta[e.status] || statusMeta['applied'];
+    const notePreview = e.notes
+      ? (e.notes.length > 45 ? e.notes.slice(0, 45) + '…' : e.notes)
+      : '—';
+    const deadlinePast = e.deadline && e.deadline < today() && e.status === 'applied';
+    const deadlineStyle = deadlinePast ? 'color:#c53030;font-weight:500;' : 'color:var(--text2);';
+    return `<tr>
+      <td style="font-weight:500;color:var(--g800);" title="${e.institution||''}">${e.institution || '—'}</td>
+      <td title="${e.role||''}">${e.role || '—'}</td>
+      <td style="color:var(--text2);">${e.country || '—'}</td>
+      <td style="color:var(--text2);">${fmt(e.date)}</td>
+      <td style="${deadlineStyle}" title="${deadlinePast?'Deadline passed':''}">${fmt(e.deadline)}</td>
+      <td><span class="badge ${sm.cls}">${sm.label}</span></td>
+      <td style="color:var(--text2);font-size:12px;" title="${(e.notes||'').replace(/"/g,'&quot;')}">${notePreview}</td>
+      <td>
+        <div class="actions">
+          <button class="icon-btn" onclick="openModal('${e.id}')" title="Edit">&#9998;</button>
+          <button class="icon-btn del" onclick="deleteEntry('${e.id}')" title="Delete">&#10005;</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+load();
+</script>
+
+<footer style="text-align:center;padding:2.5rem 1rem 2rem;color:var(--g600);font-size:12px;letter-spacing:0.04em;">
+  <span style="display:inline-flex;align-items:center;gap:8px;">
+    <span style="width:5px;height:5px;border-radius:50%;background:var(--g400);display:inline-block;"></span>
+    by Signal &amp; Seed
+    <span style="width:5px;height:5px;border-radius:50%;background:var(--g400);display:inline-block;"></span>
+  </span>
+</footer>
+</body>
+</html>
