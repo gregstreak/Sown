@@ -48,6 +48,8 @@
 
   .btn-add { background: var(--g400); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; font-family: inherit; font-weight: 500; white-space: nowrap; }
   .btn-add:hover { background: var(--g600); }
+  .btn-sec { background: none; border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit; color: var(--text2); white-space: nowrap; }
+  .btn-sec:hover { background: var(--g50); border-color: var(--g200); color: var(--g600); }
 
   .table-wrap { background: var(--bg); border: 0.5px solid var(--border); border-radius: 12px; overflow: hidden; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
@@ -119,6 +121,9 @@
         <span class="search-icon">&#9906;</span>
         <input id="search" type="text" placeholder="Search…" oninput="render()">
       </div>
+      <button class="btn-sec" onclick="exportData()">Export</button>
+      <button class="btn-sec" onclick="document.getElementById('import-input').click()">Import</button>
+      <input id="import-input" type="file" accept=".json" style="display:none" onchange="importData(this)">
       <button class="btn-add" onclick="openModal()">+ Add application</button>
     </div>
   </div>
@@ -378,6 +383,75 @@ function render() {
       </td>
     </tr>`;
   }).join('');
+}
+
+function exportData() {
+  if (entries.length === 0) { alert('Nothing to export yet.'); return; }
+  const date = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify({ sown: true, version: 1, entries }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sown-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let parsed;
+    try {
+      parsed = JSON.parse(e.target.result);
+    } catch {
+      alert('That file could not be read. Make sure it is a valid Sown backup (.json).');
+      return;
+    }
+    if (!parsed.sown || !Array.isArray(parsed.entries)) {
+      alert('This does not look like a Sown backup file. Nothing was changed.');
+      return;
+    }
+    const incoming = parsed.entries;
+    if (incoming.length === 0) {
+      alert('The backup file is empty. Nothing was changed.');
+      return;
+    }
+    if (entries.length > 0) {
+      const choice = confirm(
+        `You have ${entries.length} application${entries.length === 1 ? '' : 's'} already.\n\n` +
+        `OK — Add the imported entries to your current list (duplicates skipped).\n` +
+        `Cancel — Replace your current list with the imported entries.`
+      );
+      if (choice) {
+        // Add, skipping exact duplicates
+        const existingSigs = new Set(entries.map(entrySignature));
+        const toAdd = incoming.filter(e => !existingSigs.has(entrySignature(e)));
+        if (toAdd.length === 0) {
+          alert('All entries in the backup are already in your list. Nothing was added.');
+          return;
+        }
+        entries = [...entries, ...toAdd];
+        alert(`${toAdd.length} entr${toAdd.length === 1 ? 'y' : 'ies'} added.`);
+      } else {
+        if (!confirm('Replace your current list? This cannot be undone.')) return;
+        entries = incoming;
+        alert(`Imported ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}.`);
+      }
+    } else {
+      entries = incoming;
+      alert(`Imported ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}.`);
+    }
+    save();
+    render();
+  };
+  reader.readAsText(file);
+}
+
+function entrySignature(e) {
+  return [e.institution, e.role, e.country, e.date, e.deadline, e.status, e.contact, e.notes]
+    .map(v => (v || '').trim().toLowerCase()).join('|');
 }
 
 load();
